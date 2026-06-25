@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = "python-project"
         DOCKER_HUB = "javithn79"
         BUILD_TAG = "${BUILD_NUMBER}"
+        CONTAINER_NAME = "python-app"
     }
 
     stages {
@@ -16,7 +17,7 @@ pipeline {
                 . venv/bin/activate
                 pip install --upgrade pip
                 pip install -r app/requirements.txt
-                # Fix module path issue
+
                 export PYTHONPATH=$PWD
                 pytest tests/
                 '''
@@ -44,9 +45,25 @@ pipeline {
             }
         }
 
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                # Stop and remove old container if exists
+                docker stop $CONTAINER_NAME || true
+                docker rm $CONTAINER_NAME || true
+
+                # Run new container
+                docker run -d \
+                    --name $CONTAINER_NAME \
+                    -p 5000:5000 \
+                    $DOCKER_HUB/$IMAGE_NAME:$BUILD_TAG
+                '''
+            }
+        }
+
         stage('Deploy') {
             steps {
-                echo "🚀 Deploy step (optional)"
+                echo "🚀 Application deployed successfully"
             }
         }
     }
